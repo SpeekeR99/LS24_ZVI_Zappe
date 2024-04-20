@@ -2,6 +2,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -17,7 +18,7 @@ class EdgeDetectionNet(nn.Module):
         self.conv3 = nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU()
         self.pool = nn.MaxPool2d(2, 2)
-        self.upsample = nn.Upsample((1024, 1024), mode="bilinear", align_corners=True)
+        self.upsample = nn.Upsample((512, 512), mode="bilinear", align_corners=True)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -60,7 +61,7 @@ class EdgeDetectionDataset(Dataset):
         self.image_transform = image_transform
         self.target_transform = target_transform
         self.pool = nn.MaxPool2d(2, 2)
-        self.upsample = nn.Upsample((1024, 1024), mode="bilinear", align_corners=True)
+        self.upsample = nn.Upsample((512, 512), mode="bilinear", align_corners=True)
 
     def __len__(self):
         return len(self.image_paths)
@@ -70,8 +71,8 @@ class EdgeDetectionDataset(Dataset):
         target = Image.open(self.target_paths[idx])
 
         # Resize the images and targets to the same size
-        image = image.resize((1024, 1024))
-        target = target.resize((1024, 1024))
+        image = image.resize((512, 512))
+        target = target.resize((512, 512))
 
         if self.image_transform:
             image = self.image_transform(image)
