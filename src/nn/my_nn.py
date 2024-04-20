@@ -12,19 +12,29 @@ from matplotlib import pyplot as plt
 class EdgeDetectionNet(nn.Module):
     def __init__(self):
         super(EdgeDetectionNet, self).__init__()
-        self.conv1 = nn.Conv2d(3, 1, kernel_size=3, padding=1)  # Change this line
+        self.conv1 = nn.Conv2d(3, 8, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU()
         self.pool = nn.MaxPool2d(2, 2)
+        self.upsample = nn.Upsample((1024, 1024), mode="bilinear", align_corners=True)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.relu(x)
         x = self.pool(x)
+        x = self.conv2(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        x = self.conv3(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        x = self.upsample(x)
         return x
 
 
-def train(net, dataloader, epochs=5):
-    criterion = nn.MSELoss()
+def train(net, dataloader, epochs=100):
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(net.parameters())
 
     for epoch in range(epochs):
@@ -38,9 +48,9 @@ def train(net, dataloader, epochs=5):
             optimizer.step()
 
             running_loss += loss.item()
-        print(f'Epoch {epoch + 1}, loss: {running_loss / len(dataloader)}')
+        print(f"Epoch {epoch + 1}, loss: {running_loss / len(dataloader)}")
 
-    print('Finished Training')
+    print("Finished Training")
 
 
 class EdgeDetectionDataset(Dataset):
@@ -50,6 +60,7 @@ class EdgeDetectionDataset(Dataset):
         self.image_transform = image_transform
         self.target_transform = target_transform
         self.pool = nn.MaxPool2d(2, 2)
+        self.upsample = nn.Upsample((1024, 1024), mode="bilinear", align_corners=True)
 
     def __len__(self):
         return len(self.image_paths)
@@ -59,29 +70,34 @@ class EdgeDetectionDataset(Dataset):
         target = Image.open(self.target_paths[idx])
 
         # Resize the images and targets to the same size
-        image = image.resize((560, 425))
-        target = target.resize((560, 425))
+        image = image.resize((1024, 1024))
+        target = target.resize((1024, 1024))
 
         if self.image_transform:
             image = self.image_transform(image)
         if self.target_transform:
             target = self.target_transform(target)
 
+        target = self.pool(target.unsqueeze(0))
         target = self.pool(target)
+        target = self.pool(target)
+        target = self.upsample(target)
 
-        return image, target
+        return image, target.squeeze(0)
 
 
 net = EdgeDetectionNet()
 
 image_transform = transforms.Compose([
+    transforms.Lambda(lambda x: x.convert("RGB")),
     transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.GaussianBlur(3, 3),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
-
 target_transform = transforms.Compose([
     transforms.ToTensor()
 ])
+
 image_dir = "../../data/UDED/imgs"
 edge_dir = "../../data/UDED/gt"
 image_files = sorted(os.listdir(image_dir))
@@ -93,14 +109,21 @@ data_loader = DataLoader(dataset, batch_size=4, shuffle=True)
 
 train(net, data_loader, epochs=100)
 
-# Save the model
 torch.save(net.state_dict(), "../../models/edge_detection_model.pth")
+print("Model saved")
+# net.load_state_dict(torch.load("../../models/edge_detection_model.pth"))
+# print("Model loaded")
 
 img = Image.open("../../data/img/pebbles.jpg")
+orig_w, orig_h = img.size
 img = image_transform(img)
+img = img.unsqueeze(0)  # Batch size dimension
 output = net(img)
 output = output.squeeze(0).detach().numpy()
-output = (255 * output).astype("uint8")
+output = output[0, :, :]  # Convert to 2D
+output = (output - output.min()) / (output.max() - output.min()) * 255
+output = output.astype("uint8")
 output = Image.fromarray(output)
-plt.imshow(output, cmap='gray')
+output = output.resize((orig_w, orig_h))
+plt.imshow(output, cmap="gray")
 plt.show()
