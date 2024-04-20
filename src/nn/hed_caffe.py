@@ -28,13 +28,13 @@ class CropLayer(object):
                 self.startX:self.endX]]
 
 
-img = cv2.imread("img/pebbles.jpg")
+img = cv2.imread("../../data/img/pebbles.jpg")
 (H, W) = img.shape[:2]
 plt.imshow(img)
 plt.show()
 
-protoPath = "hed_model/deploy.prototxt"
-modelPath = "hed_model/hed_pretrained_bsds.caffemodel"
+protoPath = "../../models/hed_model/deploy.prototxt"
+modelPath = "../../models/hed_model/hed_pretrained_bsds.caffemodel"
 net = cv2.dnn.readNetFromCaffe(protoPath, modelPath)
 
 cv2.dnn_registerLayer("Crop", CropLayer)
