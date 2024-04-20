@@ -2,7 +2,6 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -88,6 +87,7 @@ class EdgeDetectionDataset(Dataset):
 
 
 net = EdgeDetectionNet()
+print("Model initialized")
 
 image_transform = transforms.Compose([
     transforms.Lambda(lambda x: x.convert("RGB")),
@@ -106,9 +106,14 @@ edge_files = sorted(os.listdir(edge_dir))
 image_paths = [os.path.join(image_dir, file) for file in image_files]
 edge_paths = [os.path.join(edge_dir, file) for file in edge_files]
 dataset = EdgeDetectionDataset(image_paths, edge_paths, image_transform=image_transform, target_transform=target_transform)
-data_loader = DataLoader(dataset, batch_size=4, shuffle=True)
+print(f"Dataset created with {len(dataset)} samples")
 
+data_loader = DataLoader(dataset, batch_size=4, shuffle=True)
+print("DataLoader created")
+
+print("Starting training...")
 train(net, data_loader, epochs=100)
+print("Training finished")
 
 torch.save(net.state_dict(), "../../models/edge_detection_model.pth")
 print("Model saved")
@@ -119,12 +124,18 @@ img = Image.open("../../data/img/pebbles.jpg")
 orig_w, orig_h = img.size
 img = image_transform(img)
 img = img.unsqueeze(0)  # Batch size dimension
+print("Image loaded and transformed")
+
 output = net(img)
+print("Forward pass completed")
+
 output = output.squeeze(0).detach().numpy()
 output = output[0, :, :]  # Convert to 2D
 output = (output - output.min()) / (output.max() - output.min()) * 255
 output = output.astype("uint8")
 output = Image.fromarray(output)
 output = output.resize((orig_w, orig_h))
+print("Output processed")
+
 plt.imshow(output, cmap="gray")
 plt.show()
