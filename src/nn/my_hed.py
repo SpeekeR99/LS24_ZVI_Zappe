@@ -2,43 +2,69 @@ import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from PIL import Image
 from matplotlib import pyplot as plt
+# https://github.com/s9xie/hed
+# https://arxiv.org/abs/1504.06375
 
 
-class EdgeDetectionNet(nn.Module):
+class HolisticallyNestedEdgeDetectionNet(nn.Module):
     def __init__(self):
-        super(EdgeDetectionNet, self).__init__()
+        super(HolisticallyNestedEdgeDetectionNet, self).__init__()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 1, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
         )
-        self.upsample = nn.Upsample((512, 512), mode="bilinear", align_corners=True)
+        self.conv2 = nn.Sequential(
+            nn.ReLU(),
+            nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+        )
+        self.conv3 = nn.Sequential(
+            nn.ReLU(),
+            nn.MaxPool2d(2, stride=2),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+        )
+
+        self.score_dsn1 = nn.Conv2d(64, 1, kernel_size=1, padding=0)
+        self.score_dsn2 = nn.Conv2d(128, 1, kernel_size=1, padding=0)
+        self.score_dsn3 = nn.Conv2d(128, 1, kernel_size=1, padding=0)
+
+        self.combine = torch.nn.Sequential(
+            nn.Conv2d(3, 1, kernel_size=1, padding=0),
+        )
 
     def forward(self, x):
-        x = self.conv(x)
-        x = self.upsample(x)
-        return x
+        conv1 = self.conv1(x)
+        conv2 = self.conv2(conv1)
+        conv3 = self.conv3(conv2)
+
+        score_dsn1 = F.interpolate(self.score_dsn1(conv1), size=(512, 512), mode="bilinear", align_corners=False)
+        score_dsn2 = F.interpolate(self.score_dsn2(conv2), size=(512, 512), mode="bilinear", align_corners=False)
+        score_dsn3 = F.interpolate(self.score_dsn3(conv3), size=(512, 512), mode="bilinear", align_corners=False)
+
+        score_final = self.combine(torch.cat([score_dsn1, score_dsn2, score_dsn3], dim=1))
+
+        return score_final
 
 
-class EdgeDetectionDataset(Dataset):
+class HolisticallyNestedEdgeDetectionDataset(Dataset):
     def __init__(self, image_paths, target_paths, image_transform=None, target_transform=None):
         self.image_paths = image_paths
         self.target_paths = target_paths
         self.image_transform = image_transform
         self.target_transform = target_transform
-        self.pool = nn.MaxPool2d(2, 2)
-        self.upsample = nn.Upsample((512, 512), mode="bilinear", align_corners=True)
 
     def __len__(self):
         return len(self.image_paths)
@@ -52,16 +78,10 @@ class EdgeDetectionDataset(Dataset):
         if self.target_transform:
             target = self.target_transform(target)
 
-        target = target.unsqueeze(0)
-        target = self.pool(target)
-        target = self.pool(target)
-        target = self.upsample(target)
-        target = target.squeeze(0)
-
         return image, target
 
 
-net = EdgeDetectionNet()
+net = HolisticallyNestedEdgeDetectionNet()
 print("Model initialized")
 
 image_transform = transforms.Compose([
@@ -69,17 +89,17 @@ image_transform = transforms.Compose([
     transforms.Lambda(lambda x: x.convert("RGB")),
     transforms.ToTensor(),
     transforms.GaussianBlur(3, 3),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 target_transform = transforms.Compose([
     transforms.Resize((512, 512)),
     transforms.ToTensor()
 ])
 
-# image_dir = "../../data/UDED/imgs"
-image_dir = "../../data/dataset/imgs"
-# edge_dir = "../../data/UDED/gt"
-edge_dir = "../../data/dataset/edges"
+image_dir = "../../data/UDED/imgs"
+# image_dir = "../../data/dataset/imgs"
+edge_dir = "../../data/UDED/gt"
+# edge_dir = "../../data/dataset/edges"
 image_files = sorted(os.listdir(image_dir))
 edge_files = sorted(os.listdir(edge_dir))
 image_paths = [os.path.join(image_dir, file) for file in image_files]
@@ -87,8 +107,8 @@ edge_paths = [os.path.join(edge_dir, file) for file in edge_files]
 image_paths_train, image_paths_test, edge_paths_train, edge_paths_test = train_test_split(image_paths, edge_paths, test_size=0.2)
 
 # Create datasets
-train_dataset = EdgeDetectionDataset(image_paths_train, edge_paths_train, image_transform=image_transform, target_transform=target_transform)
-test_dataset = EdgeDetectionDataset(image_paths_test, edge_paths_test, image_transform=image_transform, target_transform=target_transform)
+train_dataset = HolisticallyNestedEdgeDetectionDataset(image_paths_train, edge_paths_train, image_transform=image_transform, target_transform=target_transform)
+test_dataset = HolisticallyNestedEdgeDetectionDataset(image_paths_test, edge_paths_test, image_transform=image_transform, target_transform=target_transform)
 print(f"Train dataset created with {len(train_dataset)} samples")
 print(f"Test dataset created with {len(test_dataset)} samples")
 
@@ -99,7 +119,7 @@ print("DataLoader created")
 
 print("Starting training...")
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(net.parameters())
+optimizer = optim.SGD(net.parameters())
 epochs = 30
 
 for epoch in range(epochs):
@@ -123,9 +143,9 @@ for epoch in range(epochs):
 
 print("Training finished")
 
-torch.save(net.state_dict(), "../../models/edge_detection_model.pth")
+torch.save(net.state_dict(), "../../models/edge_detection_hed_model.pth")
 print("Model saved")
-# net.load_state_dict(torch.load("../../models/edge_detection_model.pth"))
+# net.load_state_dict(torch.load("../../models/edge_detection_hed_model.pth"))
 # print("Model loaded")
 
 img = Image.open("../../data/img/pebbles.jpg")
