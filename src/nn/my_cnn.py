@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import cv2
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,19 +17,19 @@ class EdgeDetectionNet(nn.Module):
         super(EdgeDetectionNet, self).__init__()
 
         self.conv = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(3, 8, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(8, 16, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2, 2),
-            nn.Conv2d(64, 1, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(16, 1, kernel_size=3, stride=1, padding=1),
         )
         self.upsample = nn.Upsample((512, 512), mode="bilinear", align_corners=True)
 
     def forward(self, x):
         x = self.conv(x)
-        x = self.upsample(x)
+        # x = self.upsample(x)
         return x
 
 
@@ -55,7 +57,7 @@ class EdgeDetectionDataset(Dataset):
         target = target.unsqueeze(0)
         target = self.pool(target)
         target = self.pool(target)
-        target = self.upsample(target)
+        # target = self.upsample(target)
         target = target.squeeze(0)
 
         return image, target
@@ -65,21 +67,21 @@ net = EdgeDetectionNet()
 print("Model initialized")
 
 image_transform = transforms.Compose([
-    transforms.Resize((512, 512)),
+    # transforms.Resize((512, 512)),
     transforms.Lambda(lambda x: x.convert("RGB")),
     transforms.ToTensor(),
     transforms.GaussianBlur(3, 3),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 target_transform = transforms.Compose([
-    transforms.Resize((512, 512)),
+    # transforms.Resize((512, 512)),
     transforms.ToTensor()
 ])
 
 # image_dir = "../../data/UDED/imgs"
-image_dir = "../../data/dataset/imgs"
+image_dir = "../../data/BIPED/edges/imgs/train/rgbr/real"
 # edge_dir = "../../data/UDED/gt"
-edge_dir = "../../data/dataset/edges"
+edge_dir = "../../data/BIPED/edges/edge_maps/train/rgbr/real"
 image_files = sorted(os.listdir(image_dir))
 edge_files = sorted(os.listdir(edge_dir))
 image_paths = [os.path.join(image_dir, file) for file in image_files]
@@ -97,36 +99,36 @@ train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
 print("DataLoader created")
 
-print("Starting training...")
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(net.parameters())
-epochs = 30
+# print("Starting training...")
+# criterion = nn.BCEWithLogitsLoss()
+# optimizer = optim.Adam(net.parameters())
+# epochs = 20
+#
+# for epoch in range(epochs):
+#     for data in train_loader:
+#         inputs, targets = data
+#         optimizer.zero_grad()
+#         outputs = net(inputs)
+#         loss = criterion(outputs, targets)
+#         loss.backward()
+#         optimizer.step()
+#
+#     net.eval()
+#     with torch.no_grad():
+#         test_loss = 0
+#         for data in test_loader:
+#             inputs, targets = data
+#             outputs = net(inputs)
+#             loss = criterion(outputs, targets)
+#             test_loss += loss.item()
+#         print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}")
+#
+# print("Training finished")
 
-for epoch in range(epochs):
-    for data in train_loader:
-        inputs, targets = data
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-
-    net.eval()
-    with torch.no_grad():
-        test_loss = 0
-        for data in test_loader:
-            inputs, targets = data
-            outputs = net(inputs)
-            loss = criterion(outputs, targets)
-            test_loss += loss.item()
-        print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}, accuracy: {1 - test_loss / len(test_loader)}")
-
-print("Training finished")
-
-torch.save(net.state_dict(), "../../models/edge_detection_model.pth")
-print("Model saved")
-# net.load_state_dict(torch.load("../../models/edge_detection_model.pth"))
-# print("Model loaded")
+# torch.save(net.state_dict(), "../../models/edge_detection_model.pth")
+# print("Model saved")
+net.load_state_dict(torch.load("../../models/edge_detection_model_only_bigger_data_meta.pth"))
+print("Model loaded")
 
 img = Image.open("../../data/img/pebbles.jpg")
 orig_w, orig_h = img.size
