@@ -174,3 +174,10 @@ print("Output processed")
 
 plt.imshow(output, cmap="gray")
 plt.show()
+
+import numpy as np
+output = np.array(output)
+thresholded = np.where(output > 180, output, 0).astype(np.uint8)
+
+plt.imshow(thresholded, cmap="gray")
+plt.show()

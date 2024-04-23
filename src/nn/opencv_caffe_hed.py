@@ -30,8 +30,6 @@ class CropLayer(object):
 
 img = cv2.imread("../../data/img/pebbles.jpg")
 (H, W) = img.shape[:2]
-plt.imshow(img)
-plt.show()
 
 protoPath = "../../models/hed_model/deploy.prototxt"
 modelPath = "../../models/hed_model/hed_pretrained_bsds.caffemodel"
@@ -43,8 +41,6 @@ mean_pixel_values = np.average(img, axis=(0, 1))
 blob = cv2.dnn.blobFromImage(img, scalefactor=0.7, size=(W, H), mean=mean_pixel_values, swapRB=True, crop=False)
 
 blob_for_plot = np.moveaxis(blob[0, :, :, :], 0, 2)
-plt.imshow(blob_for_plot)
-plt.show()
 
 net.setInput(blob)
 hed = net.forward()
