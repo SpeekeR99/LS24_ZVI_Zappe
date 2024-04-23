@@ -57,9 +57,9 @@ class HolisticallyNestedEdgeDetectionNet(nn.Module):
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
 
-        score_dsn1 = F.interpolate(self.score_dsn1(conv1), size=(256, 256), mode="bilinear", align_corners=False)
-        score_dsn2 = F.interpolate(self.score_dsn2(conv2), size=(256, 256), mode="bilinear", align_corners=False)
-        score_dsn3 = F.interpolate(self.score_dsn3(conv3), size=(256, 256), mode="bilinear", align_corners=False)
+        score_dsn1 = F.interpolate(self.score_dsn1(conv1), size=(512, 512), mode="bilinear", align_corners=False)
+        score_dsn2 = F.interpolate(self.score_dsn2(conv2), size=(512, 512), mode="bilinear", align_corners=False)
+        score_dsn3 = F.interpolate(self.score_dsn3(conv3), size=(512, 512), mode="bilinear", align_corners=False)
 
         score_final = self.combine(torch.cat([score_dsn1, score_dsn2, score_dsn3], dim=1))
 
@@ -92,21 +92,24 @@ net = HolisticallyNestedEdgeDetectionNet()
 print("Model initialized")
 
 image_transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((512, 512)),
     transforms.Lambda(lambda x: x.convert("RGB")),
     transforms.ToTensor(),
     transforms.GaussianBlur(3, 3),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 target_transform = transforms.Compose([
-    transforms.Resize((256, 256)),
+    transforms.Resize((512, 512)),
+    transforms.Lambda(lambda x: x.convert("L")),
     transforms.ToTensor()
 ])
 
-image_dir = "../../data/UDED/imgs"
+# image_dir = "../../data/UDED/imgs"
 # image_dir = "../../data/dataset/imgs"
-edge_dir = "../../data/UDED/gt"
+image_dir = "../../data/my_dataset/imgs"
+# edge_dir = "../../data/UDED/gt"
 # edge_dir = "../../data/dataset/edges"
+edge_dir = "../../data/my_dataset/edges"
 image_files = sorted(os.listdir(image_dir))
 edge_files = sorted(os.listdir(edge_dir))
 image_paths = [os.path.join(image_dir, file) for file in image_files]
@@ -124,36 +127,36 @@ train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
 print("DataLoader created")
 
-# print("Starting training...")
-# criterion = nn.BCEWithLogitsLoss()
-# optimizer = optim.SGD(net.parameters())
-# epochs = 30
-#
-# for epoch in range(epochs):
-#     for data in train_loader:
-#         inputs, targets = data
-#         optimizer.zero_grad()
-#         outputs = net(inputs)
-#         loss = criterion(outputs, targets)
-#         loss.backward()
-#         optimizer.step()
-#
-#     net.eval()
-#     with torch.no_grad():
-#         test_loss = 0
-#         for data in test_loader:
-#             inputs, targets = data
-#             outputs = net(inputs)
-#             loss = criterion(outputs, targets)
-#             test_loss += loss.item()
-#         print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}")
-#
-# print("Training finished")
+print("Starting training...")
+criterion = nn.BCEWithLogitsLoss()
+optimizer = optim.SGD(net.parameters())
+epochs = 30
 
-# torch.save(net.state_dict(), "../../models/edge_detection_hed_model.pth")
-# print("Model saved")
-net.load_state_dict(torch.load("../../models/edge_detection_hed_model_meta.pth"))
-print("Model loaded")
+for epoch in range(epochs):
+    for data in train_loader:
+        inputs, targets = data
+        optimizer.zero_grad()
+        outputs = net(inputs)
+        loss = criterion(outputs, targets)
+        loss.backward()
+        optimizer.step()
+
+    net.eval()
+    with torch.no_grad():
+        test_loss = 0
+        for data in test_loader:
+            inputs, targets = data
+            outputs = net(inputs)
+            loss = criterion(outputs, targets)
+            test_loss += loss.item()
+        print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}")
+
+print("Training finished")
+
+torch.save(net.state_dict(), "../../models/edge_detection_hed_model_my_data.pth")
+print("Model saved")
+# net.load_state_dict(torch.load("../../models/edge_detection_hed_model_meta.pth"))
+# print("Model loaded")
 
 img = Image.open("../../data/img/pebbles.jpg")
 orig_w, orig_h = img.size
@@ -173,6 +176,7 @@ output = output.resize((orig_w, orig_h))
 print("Output processed")
 
 plt.imshow(output, cmap="gray")
+plt.axis("off")
 plt.show()
 
 import numpy as np
@@ -180,4 +184,5 @@ output = np.array(output)
 thresholded = np.where(output > 180, output, 0).astype(np.uint8)
 
 plt.imshow(thresholded, cmap="gray")
+plt.axis("off")
 plt.show()

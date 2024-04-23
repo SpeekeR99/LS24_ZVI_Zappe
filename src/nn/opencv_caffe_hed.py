@@ -48,4 +48,5 @@ hed = hed[0, 0, :, :]
 hed = (255 * hed).astype("uint8")
 
 plt.imshow(hed, cmap='gray')
+plt.axis("off")
 plt.show()

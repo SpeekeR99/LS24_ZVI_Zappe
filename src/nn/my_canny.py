@@ -127,4 +127,5 @@ blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded = net(i
 
 res_img = (thresholded.data.cpu().numpy()[0, 0] > 0.0).astype(float)
 plt.imshow(res_img, cmap="gray")
+plt.axis("off")
 plt.show()
