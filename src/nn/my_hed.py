@@ -57,9 +57,9 @@ class HolisticallyNestedEdgeDetectionNet(nn.Module):
         conv2 = self.conv2(conv1)
         conv3 = self.conv3(conv2)
 
-        score_dsn1 = F.interpolate(self.score_dsn1(conv1), size=(512, 512), mode="bilinear", align_corners=False)
-        score_dsn2 = F.interpolate(self.score_dsn2(conv2), size=(512, 512), mode="bilinear", align_corners=False)
-        score_dsn3 = F.interpolate(self.score_dsn3(conv3), size=(512, 512), mode="bilinear", align_corners=False)
+        score_dsn1 = F.interpolate(self.score_dsn1(conv1), size=(1024, 1024), mode="bilinear", align_corners=False)
+        score_dsn2 = F.interpolate(self.score_dsn2(conv2), size=(1024, 1024), mode="bilinear", align_corners=False)
+        score_dsn3 = F.interpolate(self.score_dsn3(conv3), size=(1024, 1024), mode="bilinear", align_corners=False)
 
         score_final = self.combine(torch.cat([score_dsn1, score_dsn2, score_dsn3], dim=1))
 
@@ -92,14 +92,14 @@ net = HolisticallyNestedEdgeDetectionNet()
 print("Model initialized")
 
 image_transform = transforms.Compose([
-    transforms.Resize((512, 512)),
+    transforms.Resize((1024, 1024)),
     transforms.Lambda(lambda x: x.convert("RGB")),
     transforms.ToTensor(),
     transforms.GaussianBlur(3, 3),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 target_transform = transforms.Compose([
-    transforms.Resize((512, 512)),
+    transforms.Resize((1024, 1024)),
     transforms.Lambda(lambda x: x.convert("L")),
     transforms.ToTensor()
 ])
@@ -130,7 +130,7 @@ print("DataLoader created")
 print("Starting training...")
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(net.parameters())
-epochs = 50
+epochs = 100
 
 for epoch in range(epochs):
     for data in train_loader:
@@ -153,7 +153,7 @@ for epoch in range(epochs):
 
 print("Training finished")
 
-torch.save(net.state_dict(), "../../models/edge_detection_hed_model_my_data.pth")
+torch.save(net.state_dict(), "../../models/edge_detection_hed_model_my_data_new.pth")
 print("Model saved")
 # net.load_state_dict(torch.load("../../models/edge_detection_hed_model_meta.pth"))
 # print("Model loaded")
