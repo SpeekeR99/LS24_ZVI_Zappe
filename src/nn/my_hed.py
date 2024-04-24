@@ -129,8 +129,8 @@ print("DataLoader created")
 
 print("Starting training...")
 criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.SGD(net.parameters())
-epochs = 30
+optimizer = optim.Adam(net.parameters())
+epochs = 50
 
 for epoch in range(epochs):
     for data in train_loader:
