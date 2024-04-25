@@ -1,5 +1,8 @@
+import numpy as np
 import cv2
+from PIL import Image
 import torch
+from torchvision import transforms
 
 from src.nn.net_loader import NetLoader
 
@@ -22,6 +25,21 @@ hed_my_net = NetLoader.load_weights(hed_my_net, "../../models/edge_detection_hed
 hed_my_smoother_net = NetLoader.load_net("hed")
 hed_my_smoother_net = NetLoader.load_weights(hed_my_smoother_net, "../../models/edge_detection_hed_model_my_data_bigger_resize.pth")
 
+cnn_img_transform = transforms.Compose([
+    transforms.Resize((1024, 1024)),
+    transforms.Lambda(lambda x: x.convert("RGB")),
+    transforms.ToTensor(),
+    transforms.GaussianBlur(3, 3),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+hed_img_transform = transforms.Compose([
+    transforms.Resize((1024, 1024)),
+    transforms.Lambda(lambda x: x.convert("RGB")),
+    transforms.ToTensor(),
+    transforms.GaussianBlur(3, 3),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
+
 
 def canny_net_edge_detection(img):
     img = img.astype(float) / 255.0
@@ -35,7 +53,26 @@ def canny_net_edge_detection(img):
 
 
 def cnn_big_edge_detection(img):
-    pass
+    orig_w, orig_h = img.shape[:2]
+    img = Image.fromarray(img)
+    img = cnn_img_transform(img)
+    img = img.unsqueeze(0)
+
+    output = cnn_big_net(img)
+
+    output = output.squeeze(0).detach().numpy()
+    output = output[0, :, :]  # Convert to 2D
+
+    output = (output - output.min()) / (output.max() - output.min()) * 255
+    output = output.astype("uint8")
+
+    output = Image.fromarray(output)
+    output = output.resize((orig_h, orig_w))
+
+    output = np.array(output)
+    thresholded = np.where(output > 100, output, 0).astype(np.uint8)
+
+    return thresholded
 
 
 def cnn_my_edge_detection(img):

@@ -9,7 +9,8 @@ import wx
 from traditional_edge_detection import defined_direction_edge_detection, gradient_magnitude_direction_edge_detection, \
     mask_methods_edge_detection, laplacian_operator_edge_detection, line_detection_edge_detection, \
     point_detection_edge_detection, canny_edge_detection, canny_edge_detection_opencv, marr_hildreth_edge_detection
-from cnn_edge_detection import canny_net_edge_detection
+from cnn_edge_detection import canny_net_edge_detection, cnn_big_edge_detection, cnn_my_edge_detection, \
+    hed_baseline_edge_detection, hed_big_edge_detection, hed_my_edge_detection, hed_my_smoother_edge_detection
 
 #  Window width
 WINDOW_WIDTH = 1280
@@ -41,7 +42,10 @@ edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitud
                           "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection",
                           "Canny Edge Detection", "Canny Edge Detection (OpenCV)", "Marr-Hildreth Edge Detection"]
 #  CNN edge detection methods
-cnn_edge_detection_methods = ["Canny Edge Detection (analytical weights)"]
+cnn_edge_detection_methods = ["Canny Edge Detection (analytical weights)", "CNN Edge Detection (big data)",
+                              "CNN Edge Detection (my data)", "HED Edge Detection (baseline)",
+                              "HED Edge Detection (big data)", "HED Edge Detection (my data)",
+                              "HED Edge Detection (my data bigger resize)"]
 #  Currently selected edge detection method
 current_edge_detection_method = 0
 #  Currently selected CNN edge detection method
@@ -293,7 +297,13 @@ def cnn_generate_button_callback():
     global imgs
 
     edge_detection = [
-        canny_net_edge_detection
+        canny_net_edge_detection,
+        cnn_big_edge_detection,
+        cnn_my_edge_detection,
+        hed_baseline_edge_detection,
+        hed_big_edge_detection,
+        hed_my_edge_detection,
+        hed_my_smoother_edge_detection
     ]
 
     img = imgs[list(imgs.keys())[current_img]]["img"]
@@ -624,11 +634,9 @@ def main():
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
 
             my_text_separator("Edge Detection Method")
-            _, current_cnn_edge_detection_method = imgui.combo("Edge Detection Method", current_cnn_edge_detection_method,
-                                                           cnn_edge_detection_methods)
-
-            if current_cnn_edge_detection_method == 0:  # Canny Edge Detection (analytical weights)
-                imgui.text("Canny Edge Detection (analytical weights)")
+            _, current_cnn_edge_detection_method = imgui.combo("Edge Detection Method",
+                                                               current_cnn_edge_detection_method,
+                                                               cnn_edge_detection_methods)
 
             if imgui.button("Generate"):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
