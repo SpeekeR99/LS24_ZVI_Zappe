@@ -98,6 +98,8 @@ marr_hildreth_sigma = 2
 
 #  Current CNN postprocess threshold
 cnn_postprocess_threshold = 100
+#  Current HED postprocess threshold
+hed_postprocess_threshold = 180
 
 
 def impl_glfw_init():
@@ -314,9 +316,9 @@ def cnn_generate_button_callback():
         [cnn_postprocess_threshold],
         [cnn_postprocess_threshold],
         [],
-        [],
-        [],
-        []
+        [hed_postprocess_threshold],
+        [hed_postprocess_threshold],
+        [hed_postprocess_threshold]
     ]
 
     img = imgs[list(imgs.keys())[current_img]]["img"]
@@ -381,7 +383,7 @@ def main():
         threshold_value, laplacian_square, current_defined_direction_method, defined_direction_horizontal, \
         defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, \
         point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma, \
-        cnn_postprocess_threshold
+        cnn_postprocess_threshold, hed_postprocess_threshold
 
     app = wx.App()
     app.MainLoop()
@@ -654,6 +656,10 @@ def main():
 
             if current_cnn_edge_detection_method == 1 or current_cnn_edge_detection_method == 2:  # CNN
                 _, cnn_postprocess_threshold = imgui.slider_int("Postprocessing threshold", cnn_postprocess_threshold, 0, 255)
+
+            if current_cnn_edge_detection_method == 4 or current_cnn_edge_detection_method == 5 or \
+               current_cnn_edge_detection_method == 6:  # HED
+                _, hed_postprocess_threshold = imgui.slider_int("Postprocessing threshold", hed_postprocess_threshold, 0, 255)
 
             if imgui.button("Generate"):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):

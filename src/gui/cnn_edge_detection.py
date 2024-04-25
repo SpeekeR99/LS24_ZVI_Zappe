@@ -53,15 +53,15 @@ def canny_net_edge_detection(img, args):
     return res_img
 
 
-def preprocess_cnn_img(img):
+def preprocess_img(img, transform):
     orig_w, orig_h = img.shape[:2]
     img = Image.fromarray(img)
-    img = cnn_img_transform(img)
+    img = transform(img)
     img = img.unsqueeze(0)
     return img, orig_w, orig_h
 
 
-def postprocess_cnn_output(output, orig_w, orig_h, threshold=100):
+def postprocess_output(output, orig_w, orig_h, threshold=100):
     output = output.squeeze(0).detach().numpy()
     output = output[0, :, :]  # Convert to 2D
 
@@ -79,17 +79,17 @@ def postprocess_cnn_output(output, orig_w, orig_h, threshold=100):
 def cnn_big_edge_detection(img, args):
     threshold = args[0]
 
-    img, orig_w, orig_h = preprocess_cnn_img(img)
+    img, orig_w, orig_h = preprocess_img(img, cnn_img_transform)
     output = cnn_big_net(img)
-    return postprocess_cnn_output(output, orig_w, orig_h, threshold)
+    return postprocess_output(output, orig_w, orig_h, threshold)
 
 
 def cnn_my_edge_detection(img, args):
     threshold = args[0]
 
-    img, orig_w, orig_h = preprocess_cnn_img(img)
+    img, orig_w, orig_h = preprocess_img(img, cnn_img_transform)
     output = cnn_my_net(img)
-    return postprocess_cnn_output(output, orig_w, orig_h, threshold)
+    return postprocess_output(output, orig_w, orig_h, threshold)
 
 
 def hed_baseline_edge_detection(img, args):
@@ -106,12 +106,24 @@ def hed_baseline_edge_detection(img, args):
 
 
 def hed_big_edge_detection(img, args):
-    pass
+    threshold = args[0]
+
+    img, orig_w, orig_h = preprocess_img(img, hed_img_transform)
+    output = hed_big_net(img)
+    return postprocess_output(output, orig_w, orig_h, threshold)
 
 
 def hed_my_edge_detection(img, args):
-    pass
+    threshold = args[0]
+
+    img, orig_w, orig_h = preprocess_img(img, hed_img_transform)
+    output = hed_my_net(img)
+    return postprocess_output(output, orig_w, orig_h, threshold)
 
 
 def hed_my_smoother_edge_detection(img, args):
-    pass
+    threshold = args[0]
+
+    img, orig_w, orig_h = preprocess_img(img, hed_img_transform)
+    output = hed_my_smoother_net(img)
+    return postprocess_output(output, orig_w, orig_h, threshold)
