@@ -59,100 +59,101 @@ class EdgeDetectionDataset(Dataset):
         return image, target
 
 
-net = EdgeDetectionNet()
-print("Model initialized")
+if __name__ == "__main__":
+    net = EdgeDetectionNet()
+    print("Model initialized")
 
-image_transform = transforms.Compose([
-    transforms.Resize((1024, 1024)),
-    transforms.Lambda(lambda x: x.convert("RGB")),
-    transforms.ToTensor(),
-    transforms.GaussianBlur(3, 3),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-target_transform = transforms.Compose([
-    transforms.Resize((1024, 1024)),
-    transforms.Lambda(lambda x: x.convert("L")),
-    transforms.ToTensor()
-])
+    image_transform = transforms.Compose([
+        transforms.Resize((1024, 1024)),
+        transforms.Lambda(lambda x: x.convert("RGB")),
+        transforms.ToTensor(),
+        transforms.GaussianBlur(3, 3),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    target_transform = transforms.Compose([
+        transforms.Resize((1024, 1024)),
+        transforms.Lambda(lambda x: x.convert("L")),
+        transforms.ToTensor()
+    ])
 
-# image_dir = "../../data/UDED/imgs"
-# image_dir = "../../data/BIPED/edges/imgs/train/rgbr/real"
-image_dir = "../../data/my_dataset/imgs"
-# edge_dir = "../../data/UDED/gt"
-# edge_dir = "../../data/BIPED/edges/edge_maps/train/rgbr/real"
-edge_dir = "../../data/my_dataset/edges"
-image_files = sorted(os.listdir(image_dir))
-edge_files = sorted(os.listdir(edge_dir))
-image_paths = [os.path.join(image_dir, file) for file in image_files]
-edge_paths = [os.path.join(edge_dir, file) for file in edge_files]
-image_paths_train, image_paths_test, edge_paths_train, edge_paths_test = train_test_split(image_paths, edge_paths, test_size=0.2)
+    # image_dir = "../../data/UDED/imgs"
+    # image_dir = "../../data/BIPED/edges/imgs/train/rgbr/real"
+    image_dir = "../../data/my_dataset/imgs"
+    # edge_dir = "../../data/UDED/gt"
+    # edge_dir = "../../data/BIPED/edges/edge_maps/train/rgbr/real"
+    edge_dir = "../../data/my_dataset/edges"
+    image_files = sorted(os.listdir(image_dir))
+    edge_files = sorted(os.listdir(edge_dir))
+    image_paths = [os.path.join(image_dir, file) for file in image_files]
+    edge_paths = [os.path.join(edge_dir, file) for file in edge_files]
+    image_paths_train, image_paths_test, edge_paths_train, edge_paths_test = train_test_split(image_paths, edge_paths, test_size=0.2)
 
-# Create datasets
-train_dataset = EdgeDetectionDataset(image_paths_train, edge_paths_train, image_transform=image_transform, target_transform=target_transform)
-test_dataset = EdgeDetectionDataset(image_paths_test, edge_paths_test, image_transform=image_transform, target_transform=target_transform)
-print(f"Train dataset created with {len(train_dataset)} samples")
-print(f"Test dataset created with {len(test_dataset)} samples")
+    # Create datasets
+    train_dataset = EdgeDetectionDataset(image_paths_train, edge_paths_train, image_transform=image_transform, target_transform=target_transform)
+    test_dataset = EdgeDetectionDataset(image_paths_test, edge_paths_test, image_transform=image_transform, target_transform=target_transform)
+    print(f"Train dataset created with {len(train_dataset)} samples")
+    print(f"Test dataset created with {len(test_dataset)} samples")
 
-# Create dataloaders
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
-print("DataLoader created")
+    # Create dataloaders
+    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False)
+    print("DataLoader created")
 
-print("Starting training...")
-criterion = nn.BCEWithLogitsLoss()
-optimizer = optim.Adam(net.parameters())
-epochs = 100
+    print("Starting training...")
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(net.parameters())
+    epochs = 100
 
-for epoch in range(epochs):
-    for data in train_loader:
-        inputs, targets = data
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-
-    net.eval()
-    with torch.no_grad():
-        test_loss = 0
-        for data in test_loader:
+    for epoch in range(epochs):
+        for data in train_loader:
             inputs, targets = data
+            optimizer.zero_grad()
             outputs = net(inputs)
             loss = criterion(outputs, targets)
-            test_loss += loss.item()
-        print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}")
+            loss.backward()
+            optimizer.step()
 
-print("Training finished")
+        net.eval()
+        with torch.no_grad():
+            test_loss = 0
+            for data in test_loader:
+                inputs, targets = data
+                outputs = net(inputs)
+                loss = criterion(outputs, targets)
+                test_loss += loss.item()
+            print(f"Epoch {epoch + 1}, loss: {test_loss / len(test_loader)}")
 
-torch.save(net.state_dict(), "../../models/edge_detection_model_my_data.pth")
-print("Model saved")
-# net.load_state_dict(torch.load("../../models/edge_detection_model_only_bigger_data_meta.pth"))
-# print("Model loaded")
+    print("Training finished")
 
-img = Image.open("../../data/img/pebbles.jpg")
-orig_w, orig_h = img.size
-img = image_transform(img)
-img = img.unsqueeze(0)  # Batch size dimension
-print("Image loaded and transformed")
+    torch.save(net.state_dict(), "../../models/edge_detection_model_my_data.pth")
+    print("Model saved")
+    # net.load_state_dict(torch.load("../../models/edge_detection_model_only_bigger_data_meta.pth"))
+    # print("Model loaded")
 
-output = net(img)
-print("Forward pass completed")
+    img = Image.open("../../data/img/pebbles.jpg")
+    orig_w, orig_h = img.size
+    img = image_transform(img)
+    img = img.unsqueeze(0)  # Batch size dimension
+    print("Image loaded and transformed")
 
-output = output.squeeze(0).detach().numpy()
-output = output[0, :, :]  # Convert to 2D
-output = (output - output.min()) / (output.max() - output.min()) * 255
-output = output.astype("uint8")
-output = Image.fromarray(output)
-output = output.resize((orig_w, orig_h))
-print("Output processed")
+    output = net(img)
+    print("Forward pass completed")
 
-plt.imshow(output, cmap="gray")
-plt.axis("off")
-plt.show()
+    output = output.squeeze(0).detach().numpy()
+    output = output[0, :, :]  # Convert to 2D
+    output = (output - output.min()) / (output.max() - output.min()) * 255
+    output = output.astype("uint8")
+    output = Image.fromarray(output)
+    output = output.resize((orig_w, orig_h))
+    print("Output processed")
 
-output = np.array(output)
-thresholded = np.where(output > 100, output, 0).astype(np.uint8)
+    plt.imshow(output, cmap="gray")
+    plt.axis("off")
+    plt.show()
 
-plt.imshow(thresholded, cmap="gray")
-plt.axis("off")
-plt.show()
+    output = np.array(output)
+    thresholded = np.where(output > 100, output, 0).astype(np.uint8)
+
+    plt.imshow(thresholded, cmap="gray")
+    plt.axis("off")
+    plt.show()

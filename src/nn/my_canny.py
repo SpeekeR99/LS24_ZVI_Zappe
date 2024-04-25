@@ -111,21 +111,21 @@ class CannyEdgeDetectionNet(nn.Module):
 
         return blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded
 
+if __name__ == "__main__":
+    net = CannyEdgeDetectionNet(threshold=0.8)
+    print("Model initialized")
 
-net = CannyEdgeDetectionNet(threshold=0.8)
-print("Model initialized")
+    torch.save(net.state_dict(), "../../models/canny_model.pth")
+    print("Model saved")
+    # net.load_state_dict(torch.load("../../models/edge_detection_model_only_bigger_data_meta.pth"))
+    # print("Model loaded")
 
-torch.save(net.state_dict(), "../../models/canny_model.pth")
-print("Model saved")
-# net.load_state_dict(torch.load("../../models/edge_detection_model_only_bigger_data_meta.pth"))
-# print("Model loaded")
+    raw_img = cv2.imread("../../data/img/pebbles.jpg") / 255.0
+    img = torch.from_numpy(raw_img).permute(2, 0, 1).unsqueeze(0).float()
 
-raw_img = cv2.imread("../../data/img/pebbles.jpg") / 255.0
-img = torch.from_numpy(raw_img).permute(2, 0, 1).unsqueeze(0).float()
+    blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded = net(img)
 
-blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded = net(img)
-
-res_img = (thresholded.data.cpu().numpy()[0, 0] > 0.0).astype(float)
-plt.imshow(res_img, cmap="gray")
-plt.axis("off")
-plt.show()
+    res_img = (thresholded.data.cpu().numpy()[0, 0] > 0.0).astype(float)
+    plt.imshow(res_img, cmap="gray")
+    plt.axis("off")
+    plt.show()
