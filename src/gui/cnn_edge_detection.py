@@ -1,3 +1,4 @@
+import cv2
 import torch
 
 from src.nn.net_loader import NetLoader
@@ -23,13 +24,15 @@ hed_my_smoother_net = NetLoader.load_weights(hed_my_smoother_net, "../../models/
 
 
 def canny_net_edge_detection(img):
+    img = img.astype(float) / 255.0
     img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0).float()
 
     blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded = canny_net(img)
 
     res_img = (thresholded.data.cpu().numpy()[0, 0] > 0.0).astype(float)
-
+    res_img = cv2.convertScaleAbs(res_img * 255)
     return res_img
+
 
 def cnn_big_edge_detection(img):
     pass

@@ -21,7 +21,9 @@ show_settings_window = False
 #  Whether to show the about window
 show_about_window = False
 #  Whether to show the edge detection window
-show_edge_detection_window = False
+show_traditional_edge_detection_window = False
+#  Whether to show the CNN edge detection window
+show_cnn_edge_detection_window = False
 #  Whether to show the blur window
 show_blur_window = False
 #  Whether to show the threshold window
@@ -38,8 +40,12 @@ current_img = 0
 edge_detection_methods = ["Defined Direction Edge Detection", "Gradient Magnitude Direction Edge Detection",
                           "Mask Methods", "Laplacian Operator", "Line Detection", "Point Detection",
                           "Canny Edge Detection", "Canny Edge Detection (OpenCV)", "Marr-Hildreth Edge Detection"]
+#  CNN edge detection methods
+cnn_edge_detection_methods = ["Canny Edge Detection (analytical weights)"]
 #  Currently selected edge detection method
 current_edge_detection_method = 0
+#  Currently selected CNN edge detection method
+current_cnn_edge_detection_method = 0
 #  Kernel size for Gaussian blur
 blur_kernel_size = 3
 #  Whether to use Otsu threshold
@@ -278,6 +284,33 @@ def generate_button_callback():
                   "show": True, "original_size": (res.shape[1], res.shape[0])}
 
 
+def cnn_generate_button_callback():
+    """
+    Callback for the CNN generate button
+    Creates new image with the selected options applied to it
+    :return: None
+    """
+    global imgs
+
+    edge_detection = [
+        canny_net_edge_detection
+    ]
+
+    img = imgs[list(imgs.keys())[current_img]]["img"]
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    res = edge_detection[current_cnn_edge_detection_method](img)
+
+    res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
+    render_res, texture = create_render_img_and_texture(res)
+
+    name = avoid_name_duplicates(list(imgs.keys())[current_img].split(".")[0] + " (" + cnn_edge_detection_methods[
+        current_cnn_edge_detection_method] + ")." + list(imgs.keys())[current_img].split(".")[-1])
+
+    imgs[name] = {"img": res, "render_img": render_res, "texture": texture,
+                  "show": True, "original_size": (res.shape[1], res.shape[0])}
+
+
 def blur_button_callback():
     """
     Callback for the blur button
@@ -319,12 +352,12 @@ def main():
     """
     Main function
     """
-    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, show_edge_detection_window, \
-        show_blur_window, blur_kernel_size, show_threshold_window, show_save_as_dialog, imgs, current_img, \
-        current_edge_detection_method, otsu_threshold, threshold_value, laplacian_square, \
-        current_defined_direction_method, defined_direction_horizontal, defined_direction_vertical, mask_size, \
-        mask_methods_kernel, forward_difference, backward_difference, point_detection_threshold, canny_sigma, \
-        canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
+    global WINDOW_WIDTH, WINDOW_HEIGHT, show_settings_window, show_about_window, current_cnn_edge_detection_method, \
+        show_traditional_edge_detection_window, show_cnn_edge_detection_window, show_blur_window, blur_kernel_size, \
+        show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, \
+        threshold_value, laplacian_square, current_defined_direction_method, defined_direction_horizontal, \
+        defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, \
+        point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
 
     app = wx.App()
     app.MainLoop()
@@ -355,7 +388,8 @@ def main():
                     ).ShowModal()
                     if sure == wx.ID_YES:
                         imgs = {}
-                        show_edge_detection_window = False
+                        show_traditional_edge_detection_window = False
+                        show_cnn_edge_detection_window = False
                         show_about_window = False
                         show_settings_window = False
 
@@ -380,9 +414,13 @@ def main():
 
                 imgui.end_menu()
             if imgui.begin_menu("Edit"):
-                clicked_edge_detect, _ = imgui.menu_item("Edge Detection...", None, False, True)
+                clicked_edge_detect, _ = imgui.menu_item("Traditional Edge Detection...", None, False, True)
                 if clicked_edge_detect:
-                    show_edge_detection_window = True
+                    show_traditional_edge_detection_window = True
+
+                clicked_cnn_edge_detect, _ = imgui.menu_item("CNN Edge Detection...", None, False, True)
+                if clicked_cnn_edge_detect:
+                    show_cnn_edge_detection_window = True
 
                 imgui.separator()
 
@@ -455,11 +493,11 @@ def main():
 
             imgui.end()
 
-        if show_edge_detection_window:
+        if show_traditional_edge_detection_window:
             imgui.set_next_window_size(500, 500, imgui.ONCE)
             imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
 
-            _, show_edge_detection_window = imgui.begin("Edge Detection", True, imgui.WINDOW_NO_COLLAPSE)
+            _, show_traditional_edge_detection_window = imgui.begin("Traditional Edge Detection", True, imgui.WINDOW_NO_COLLAPSE)
 
             my_text_separator("Image Selection")
             _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
@@ -573,6 +611,30 @@ def main():
                     print("No image selected!")
                 else:
                     generate_button_callback()
+
+            imgui.end()
+
+        if show_cnn_edge_detection_window:
+            imgui.set_next_window_size(500, 500, imgui.ONCE)
+            imgui.set_next_window_position((WINDOW_WIDTH - 500) / 2, (WINDOW_HEIGHT - 500) / 2, imgui.ONCE)
+
+            _, show_cnn_edge_detection_window = imgui.begin("CNN Edge Detection", True, imgui.WINDOW_NO_COLLAPSE)
+
+            my_text_separator("Image Selection")
+            _, current_img = imgui.combo("Image", current_img, list(imgs.keys()))
+
+            my_text_separator("Edge Detection Method")
+            _, current_cnn_edge_detection_method = imgui.combo("Edge Detection Method", current_cnn_edge_detection_method,
+                                                           cnn_edge_detection_methods)
+
+            if current_cnn_edge_detection_method == 0:  # Canny Edge Detection (analytical weights)
+                imgui.text("Canny Edge Detection (analytical weights)")
+
+            if imgui.button("Generate"):
+                if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
+                    print("No image selected!")
+                else:
+                    cnn_generate_button_callback()
 
             imgui.end()
 

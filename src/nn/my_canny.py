@@ -111,6 +111,7 @@ class CannyEdgeDetectionNet(nn.Module):
 
         return blur_img, grad_mag, grad_dir, thin_edges, thresholded, early_thresholded
 
+
 if __name__ == "__main__":
     net = CannyEdgeDetectionNet(threshold=0.8)
     print("Model initialized")
