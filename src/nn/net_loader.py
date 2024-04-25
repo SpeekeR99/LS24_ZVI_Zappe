@@ -48,11 +48,9 @@ class NetLoader:
         else:
             raise ValueError("Model not found")
 
-        print("Model initialized")
         return net
 
     @staticmethod
     def load_weights(model, weights_path):
         model.load_state_dict(torch.load(weights_path))
-        print("Weights loaded")
         return model

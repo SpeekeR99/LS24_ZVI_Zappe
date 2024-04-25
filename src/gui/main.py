@@ -96,6 +96,9 @@ canny_upper_thresh = 50
 #  Current sigma for Gaussian blur in Marr-Hildreth edge detection
 marr_hildreth_sigma = 2
 
+#  Current CNN postprocess threshold
+cnn_postprocess_threshold = 100
+
 
 def impl_glfw_init():
     """
@@ -306,10 +309,20 @@ def cnn_generate_button_callback():
         hed_my_smoother_edge_detection
     ]
 
+    args = [
+        [],
+        [cnn_postprocess_threshold],
+        [cnn_postprocess_threshold],
+        [],
+        [],
+        [],
+        []
+    ]
+
     img = imgs[list(imgs.keys())[current_img]]["img"]
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
-    res = edge_detection[current_cnn_edge_detection_method](img)
+    res = edge_detection[current_cnn_edge_detection_method](img, args[current_cnn_edge_detection_method])
 
     res = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
     render_res, texture = create_render_img_and_texture(res)
@@ -367,7 +380,8 @@ def main():
         show_threshold_window, show_save_as_dialog, imgs, current_img, current_edge_detection_method, otsu_threshold, \
         threshold_value, laplacian_square, current_defined_direction_method, defined_direction_horizontal, \
         defined_direction_vertical, mask_size, mask_methods_kernel, forward_difference, backward_difference, \
-        point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma
+        point_detection_threshold, canny_sigma, canny_lower_thresh, canny_upper_thresh, marr_hildreth_sigma, \
+        cnn_postprocess_threshold
 
     app = wx.App()
     app.MainLoop()
@@ -637,6 +651,9 @@ def main():
             _, current_cnn_edge_detection_method = imgui.combo("Edge Detection Method",
                                                                current_cnn_edge_detection_method,
                                                                cnn_edge_detection_methods)
+
+            if current_cnn_edge_detection_method == 1 or current_cnn_edge_detection_method == 2:  # CNN
+                _, cnn_postprocess_threshold = imgui.slider_int("Postprocessing threshold", cnn_postprocess_threshold, 0, 255)
 
             if imgui.button("Generate"):
                 if len(list(imgs.keys())) == 0 or current_img > len(list(imgs.keys())):
