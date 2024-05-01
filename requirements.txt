@@ -1,4 +1,11 @@
 numpy
+matplotlib
 opencv-python
+scikit-learn
+scipy
+torch
+torchvision
+pillow
 imgui[glfw]
+glfw
 wxPython
